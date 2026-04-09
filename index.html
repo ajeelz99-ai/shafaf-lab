@@ -113,7 +113,6 @@ input:focus { border-color: #1a73e8; background: white; }
     <div style="font-size:48px;margin-bottom:16px">🔒</div>
     <div style="font-size:18px;font-weight:700;color:#333;margin-bottom:8px">Access Restricted</div>
     <div style="font-size:14px;color:#888">Your Telegram account is not authorized. Contact management.</div>
-    <pre id="debugInfo" style="margin-top:20px;text-align:left;font-size:11px;color:#999;background:#f5f5f5;padding:12px;border-radius:8px"></pre>
   </div>
 </div>
 
@@ -180,7 +179,9 @@ input:focus { border-color: #1a73e8; background: white; }
       </div>
       <div class="form-group">
         <label>Type of Resin Used</label>
-        <input type="text" id="inpResin" placeholder="e.g. Uniz Grey 1KG">
+        <select id="inpResin">
+          <option value="">Select resin...</option>
+        </select>
       </div>
     </div>
 
@@ -203,6 +204,8 @@ var SHEET_ID = '1rTPjzpdkfXxBer8bUV2iQIRQ60yo31mIQMKdo8CkAeo';
 var API_KEY = 'AIzaSyDGBOFL9rSp3dPkQ1No5i5IXI27xL1-9ME';
 var WEBHOOK_URL = 'https://ajeelz99.app.n8n.cloud/webhook/dcbe16d0-dcd4-4e70-837d-413bbb75705b';
 var tgUsername = '', techName = '', allForms = [], currentForm = null;
+var resinList = [];
+var DASHBOARD_SHEET_ID = '1ToxldsqvuQUfI__xNoaxOwNG0iYx6FgkJC0hpngd0h8';
 
 function initApp() {
   var s = document.createElement('script');
@@ -239,20 +242,34 @@ function checkAccess() {
       }
       if (ok) {
         document.getElementById('techName').textContent = techName;
+        loadResins();
         loadForms();
       } else {
         document.getElementById('queueScreen').style.display = 'none';
         document.getElementById('authScreen').style.display = 'block';
-        // Debug — remove after fixing
-        var debugInfo = 'Username detected: "' + tgUsername + '"\n';
-        debugInfo += 'Technicians found: ' + (rows.length - 1) + '\n';
-        for (var j = 1; j < rows.length; j++) {
-          debugInfo += '  ' + (rows[j][1] || '') + '\n';
-        }
-        document.getElementById('debugInfo').textContent = debugInfo;
       }
     })
     .catch(function() { document.getElementById('queueLoading').textContent = 'Failed to verify access.'; });
+}
+
+function loadResins() {
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + DASHBOARD_SHEET_ID + '/values/Materials!A:D?key=' + API_KEY)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rows = data.values || [];
+      resinList = [];
+      for (var i = 1; i < rows.length; i++) {
+        var name = (rows[i][0] || '').trim();
+        var type = (rows[i][3] || '').trim().toLowerCase();
+        if (name && type === 'resin') resinList.push(name);
+      }
+      var sel = document.getElementById('inpResin');
+      sel.innerHTML = '<option value="">Select resin...</option>';
+      resinList.forEach(function(r) {
+        sel.innerHTML += '<option value="' + r.replace(/"/g, '&quot;') + '">' + r + '</option>';
+      });
+    })
+    .catch(function(e) { console.error('Failed to load resins', e); });
 }
 
 function loadForms() {
@@ -313,6 +330,7 @@ function renderQueue() {
     h += '<span class="case-type badge-pending">Pending</span>';
     if (f.asap) h += '<span class="case-type badge-asap">⚡ ASAP</span>';
     if (f.attachment === '0.5mm') h += '<span class="case-type badge-asap">0.5mm</span>';
+    if (f.trimLine && f.trimLine !== 'Straight') h += '<span class="case-type badge-asap">' + f.trimLine + '</span>';
     h += '</div></div>';
     h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
     if (f.clinic) h += '<div class="case-date">' + f.clinic + '</div>';
