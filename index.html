@@ -167,15 +167,15 @@ input:focus { border-color: #1a73e8; background: white; }
       <div class="section-title">Production Data</div>
       <div class="form-group">
         <label>Total # of Models</label>
-        <input type="number" id="inpModels" placeholder="Enter total models" inputmode="numeric">
+        <input type="number" id="inpModels" placeholder="Enter total models" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div class="row">
-        <div class="form-group"><label>L Sheets</label><input type="number" id="inpLSheets" placeholder="0" inputmode="decimal" step="0.5"></div>
-        <div class="form-group"><label>S Sheets</label><input type="number" id="inpSSheets" placeholder="0" inputmode="decimal" step="0.5"></div>
+        <div class="form-group"><label>L Sheets</label><input type="number" id="inpLSheets" placeholder="0" inputmode="decimal" pattern="[0-9.]*" step="0.5"></div>
+        <div class="form-group"><label>S Sheets</label><input type="number" id="inpSSheets" placeholder="0" inputmode="decimal" pattern="[0-9.]*" step="0.5"></div>
       </div>
       <div class="row">
-        <div class="form-group"><label>R Sheets</label><input type="number" id="inpRSheets" placeholder="0" inputmode="decimal" step="0.5"></div>
-        <div class="form-group"><label>A Sheets</label><input type="number" id="inpASheets" placeholder="0" inputmode="decimal" step="0.5"></div>
+        <div class="form-group"><label>R Sheets</label><input type="number" id="inpRSheets" placeholder="0" inputmode="decimal" pattern="[0-9.]*" step="0.5"></div>
+        <div class="form-group"><label>A Sheets</label><input type="number" id="inpASheets" placeholder="0" inputmode="decimal" pattern="[0-9.]*" step="0.5"></div>
       </div>
       <div class="form-group">
         <label>Type of Resin Used</label>
