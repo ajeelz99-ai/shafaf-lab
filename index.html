@@ -326,12 +326,13 @@ function renderQueue() {
     var idx = allForms.indexOf(f);
     h += '<div class="case-card" onclick="openDetail(' + idx + ')">';
     h += '<div class="case-header"><span class="case-number">' + f.caseNumber + '</span>';
-    h += '<div style="display:flex;gap:6px;align-items:center">';
     h += '<span class="case-type badge-pending">Pending</span>';
-    if (f.asap) h += '<span class="case-type badge-asap">⚡ ASAP</span>';
-    if (f.attachment === '0.5mm') h += '<span class="case-type badge-asap">0.5mm</span>';
-    if (f.trimLine && f.trimLine !== 'Straight') h += '<span class="case-type badge-asap">' + f.trimLine + '</span>';
-    h += '</div></div>';
+    h += '</div>';
+    var flags = [];
+    if (f.asap) flags.push('<span class="case-type badge-asap">⚡ ASAP</span>');
+    if (f.attachment === '0.5mm') flags.push('<span class="case-type badge-asap">0.5mm Attachment</span>');
+    if (f.trimLine && f.trimLine !== 'Straight') flags.push('<span class="case-type badge-asap">' + f.trimLine + '</span>');
+    if (flags.length) h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">' + flags.join('') + '</div>';
     h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
     if (f.clinic) h += '<div class="case-date">' + f.clinic + '</div>';
     h += '<div class="case-date">' + f.dateCreated + '</div>';
