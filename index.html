@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shafaf Lab</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #ffffff; color: #1a1a1a; min-height: 100vh;
+}
+.header {
+  background: #1a73e8; color: white; padding: 16px; text-align: center;
+  font-size: 18px; font-weight: 700; position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.header-sub { font-size: 12px; font-weight: 400; opacity: 0.85; margin-top: 2px; }
+.form-container { max-width: 500px; margin: 0 auto; padding: 16px; }
+.tab-bar {
+  display: flex; background: white; border-bottom: 1.5px solid #e0e0e0;
+  position: sticky; top: 52px; z-index: 49;
+}
+.tab-btn {
+  flex: 1; padding: 12px; text-align: center; font-size: 14px; font-weight: 600;
+  color: #666; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer;
+}
+.tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+.card {
+  background: white; border-radius: 12px; padding: 16px;
+  margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: #1a73e8; margin-bottom: 12px;
+}
+.case-card {
+  background: white; border-radius: 12px; padding: 14px;
+  margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer;
+}
+.case-card:active { background: #f8f9ff; }
+.case-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.case-number { font-size: 15px; font-weight: 700; color: #1a73e8; }
+.case-type {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px;
+}
+.badge-pending { background: #fff3e0; color: #e65100; }
+.badge-asap { background: #ffcdd2; color: #c62828; }
+.badge-logged { background: #e8f5e9; color: #2e7d32; }
+.case-patient { font-size: 13px; color: #444; margin-bottom: 4px; }
+.case-date { font-size: 12px; color: #999; }
+.case-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.step-box { background: #f8f9fa; border-radius: 8px; padding: 8px 10px; text-align: center; }
+.step-label { font-size: 10px; color: #999; text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; }
+.step-value { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-top: 2px; }
+.form-group { margin-bottom: 12px; }
+.form-group:last-child { margin-bottom: 0; }
+label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 5px; }
+input[type="text"], input[type="number"], select {
+  width: 100%; padding: 11px 13px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+  background: #fafafa; color: #1a1a1a; font-size: 15px; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+input:focus { border-color: #1a73e8; background: white; }
+.row { display: flex; gap: 10px; }
+.row .form-group { flex: 1; }
+.detail-row {
+  display: flex; justify-content: space-between; padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label { font-size: 13px; color: #888; }
+.detail-value { font-size: 13px; font-weight: 600; color: #333; text-align: right; }
+.detail-value.highlight { color: #c62828; font-weight: 700; }
+.submit-btn {
+  width: 100%; padding: 15px; background: #1a73e8; color: white;
+  border: none; border-radius: 10px; font-size: 16px; font-weight: 700;
+  cursor: pointer; margin-top: 4px; -webkit-appearance: none;
+}
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.submit-btn.green { background: #2e7d32; }
+.back-btn {
+  background: none; border: none; color: #1a73e8; font-size: 14px;
+  font-weight: 600; cursor: pointer; padding: 8px 0; margin-bottom: 8px;
+}
+.status-count { font-size: 12px; color: #999; margin-bottom: 12px; }
+.status-empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+.status-loading { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+#successScreen {
+  display: none; text-align: center; padding: 80px 24px;
+  max-width: 500px; margin: 0 auto;
+}
+.success-icon { font-size: 72px; margin-bottom: 20px; }
+.success-title { font-size: 26px; font-weight: 700; margin-bottom: 10px; color: #1a1a1a; }
+.success-sub { font-size: 15px; color: #666; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  🔬 Shafaf Lab
+  <div class="header-sub" id="techName"></div>
+</div>
+
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" id="tabQueue" onclick="switchTab('queue')">Queue</button>
+  <button class="tab-btn" id="tabLogged" onclick="switchTab('logged')">Logged</button>
+</div>
+
+<div id="authScreen" style="display:none">
+  <div class="form-container" style="text-align:center;padding:60px 20px">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <div style="font-size:18px;font-weight:700;color:#333;margin-bottom:8px">Access Restricted</div>
+    <div style="font-size:14px;color:#888">Your Telegram account is not authorized. Contact management.</div>
+  </div>
+</div>
+
+<div id="queueScreen">
+  <div class="form-container">
+    <div class="status-loading" id="queueLoading">Loading lab queue...</div>
+    <div class="status-count" id="queueCount" style="display:none"></div>
+    <div id="queueList"></div>
+  </div>
+</div>
+
+<div id="loggedScreen" style="display:none">
+  <div class="form-container">
+    <div class="status-count" id="loggedCount" style="display:none"></div>
+    <div id="loggedList"></div>
+  </div>
+</div>
+
+<div id="detailScreen" style="display:none">
+  <div class="form-container">
+    <button class="back-btn" onclick="showQueue()">← Back to Queue</button>
+
+    <div class="card">
+      <div class="section-title">Case Information</div>
+      <div class="detail-row"><span class="detail-label">Case Number</span><span class="detail-value" id="detCaseNum"></span></div>
+      <div class="detail-row"><span class="detail-label">Doctor</span><span class="detail-value" id="detDoctor"></span></div>
+      <div class="detail-row"><span class="detail-label">Clinic</span><span class="detail-value" id="detClinic"></span></div>
+      <div class="detail-row"><span class="detail-label">Patient</span><span class="detail-value" id="detPatient"></span></div>
+      <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value" id="detDate"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Steps</div>
+      <div class="case-steps">
+        <div class="step-box"><div class="step-label">Total Upper</div><div class="step-value" id="detTotalUpper">-</div></div>
+        <div class="step-box"><div class="step-label">Total Lower</div><div class="step-value" id="detTotalLower">-</div></div>
+      </div>
+      <div class="case-steps" style="margin-top:6px">
+        <div class="step-box"><div class="step-label">Upper To Print</div><div class="step-value" id="detUpperPrint">-</div></div>
+        <div class="step-box"><div class="step-label">Lower To Print</div><div class="step-value" id="detLowerPrint">-</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Specifications</div>
+      <div class="detail-row"><span class="detail-label">Trim Line</span><span class="detail-value" id="detTrimLine"></span></div>
+      <div class="detail-row"><span class="detail-label">Attachment</span><span class="detail-value" id="detAttachment"></span></div>
+      <div class="detail-row"><span class="detail-label">ASAP</span><span class="detail-value" id="detAsap"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Production Data</div>
+      <div class="form-group">
+        <label>Total # of Models</label>
+        <input type="number" id="inpModels" placeholder="Enter total models" inputmode="numeric">
+      </div>
+      <div class="row">
+        <div class="form-group"><label>L Sheets</label><input type="number" id="inpLSheets" placeholder="0" inputmode="decimal" step="0.5"></div>
+        <div class="form-group"><label>S Sheets</label><input type="number" id="inpSSheets" placeholder="0" inputmode="decimal" step="0.5"></div>
+      </div>
+      <div class="row">
+        <div class="form-group"><label>R Sheets</label><input type="number" id="inpRSheets" placeholder="0" inputmode="decimal" step="0.5"></div>
+        <div class="form-group"><label>A Sheets</label><input type="number" id="inpASheets" placeholder="0" inputmode="decimal" step="0.5"></div>
+      </div>
+      <div class="form-group">
+        <label>Type of Resin Used</label>
+        <input type="text" id="inpResin" placeholder="e.g. Uniz Grey 1KG">
+      </div>
+    </div>
+
+    <button class="submit-btn green" id="logCaseBtn" onclick="logCase()">✓ Log Case</button>
+  </div>
+</div>
+
+<div id="successScreen">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Case Logged!</div>
+  <div class="success-sub" id="successMsg"></div>
+  <div style="margin-top:24px">
+    <button class="submit-btn" onclick="closeSuccess()" style="max-width:240px;margin:0 auto;display:block">Back to Queue</button>
+  </div>
+</div>
+
+<script>
+var TG_PROXY = 'https://telegram-proxy.ajeelz99.workers.dev';
+var SHEET_ID = '1rTPjzpdkfXxBer8bUV2iQIRQ60yo31mIQMKdo8CkAeo';
+var API_KEY = 'AIzaSyDGBOFL9rSp3dPkQ1No5i5IXI27xL1-9ME';
+var WEBHOOK_URL = 'https://ajeelz99.app.n8n.cloud/webhook/dcbe16d0-dcd4-4e70-837d-413bbb75705b';
+var USE_TEST_DATA = true;
+
+var tgUsername = '', techName = '', allForms = [], currentForm = null;
+
+function getTestData() {
+  return [
+    { rowIndex:2, caseNumber:'R1/ 5NA6D', doctor:'Dr. Ali Hassan', clinic:'Al-Noor Clinic', patient:'Mohammed Ahmed',
+      totalUpper:'15', totalLower:'12', upperPrint:'1 to 8', lowerPrint:'1 to 7',
+      asap:true, attachment:'0.5mm', trimLine:'Scalloped', dateCreated:'09/04/2026', status:'Pending',
+      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
+    { rowIndex:3, caseNumber:'QKPGM', doctor:'Dr. Sara Al-Khatib', clinic:'Bright Smile Dental', patient:'Fatima Karim',
+      totalUpper:'20', totalLower:'18', upperPrint:'1 to 10 + R', lowerPrint:'1 to 9',
+      asap:false, attachment:'', trimLine:'Straight', dateCreated:'08/04/2026', status:'Pending',
+      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
+    { rowIndex:4, caseNumber:'MCA/ WG9P5', doctor:'Dr. Omar Faisal', clinic:'', patient:'Ahmad Radi',
+      totalUpper:'10', totalLower:'8', upperPrint:'1 to 5', lowerPrint:'1 to 4',
+      asap:false, attachment:'', trimLine:'Straight 2mm above gingiva', dateCreated:'07/04/2026', status:'Pending',
+      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
+    { rowIndex:5, caseNumber:'2nd/ B88ED', doctor:'Dr. Noor Al-Ani', clinic:'Noor Dental Center', patient:'Zainab Ali',
+      totalUpper:'24', totalLower:'22', upperPrint:'13 to 24 + R', lowerPrint:'12 to 22',
+      asap:true, attachment:'', trimLine:'Semi Scalloped', dateCreated:'06/04/2026', status:'Pending',
+      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
+    { rowIndex:6, caseNumber:'ZA44R', doctor:'Dr. Ali Hassan', clinic:'Al-Noor Clinic', patient:'Layla Mahmoud',
+      totalUpper:'12', totalLower:'12', upperPrint:'1 to 12 + R', lowerPrint:'1 to 12 + R',
+      asap:false, attachment:'0.5mm', trimLine:'Straight', dateCreated:'05/04/2026', status:'Pending',
+      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
+    { rowIndex:7, caseNumber:'YJT48', doctor:'Dr. Omar Faisal', clinic:'', patient:'Ali Hassan',
+      totalUpper:'14', totalLower:'14', upperPrint:'1 to 14', lowerPrint:'1 to 14',
+      asap:false, attachment:'', trimLine:'Straight', dateCreated:'04/04/2026', status:'Logged',
+      totalModels:'28', lSheets:'3', sSheets:'2', rSheets:'1', aSheets:'0', resinType:'Uniz Grey 1KG', dateLogged:'05/04/2026', loggedBy:'Lab Tech 1' },
+    { rowIndex:8, caseNumber:'R2/ 33044', doctor:"Aseel Jum'a", clinic:"Jum'a Clinic", patient:'Maryam Saeed',
+      totalUpper:'18', totalLower:'16', upperPrint:'1 to 9', lowerPrint:'1 to 8',
+      asap:false, attachment:'', trimLine:'Scalloped', dateCreated:'03/04/2026', status:'Logged',
+      totalModels:'17', lSheets:'2', sSheets:'1.5', rSheets:'0.5', aSheets:'0', resinType:'Prodent Skin 500g', dateLogged:'04/04/2026', loggedBy:'Lab Tech 2' },
+  ];
+}
+
+function initApp() {
+  var s = document.createElement('script');
+  s.src = 'https://telegram.org/js/telegram-web-app.js';
+  s.onload = function() {
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+      var u = window.Telegram.WebApp.initDataUnsafe.user;
+      if (u && u.username) tgUsername = u.username.toLowerCase();
+    }
+    startApp();
+  };
+  s.onerror = function() {
+    // Script blocked or failed — continue anyway
+    startApp();
+  };
+  document.head.appendChild(s);
+}
+
+function startApp() {
+  if (USE_TEST_DATA) {
+    techName = 'Test User';
+    document.getElementById('techName').textContent = techName;
+    allForms = getTestData();
+    document.getElementById('queueLoading').style.display = 'none';
+    renderQueue();
+    renderLogged();
+  } else {
+    checkAccess();
+  }
+}
+
+function checkAccess() {
+  fetch(TG_PROXY + '/sheets/v4/spreadsheets/' + SHEET_ID + '/values/Technicians!A:B?key=' + API_KEY)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rows = data.values || [];
+      var ok = false;
+      for (var i = 1; i < rows.length; i++) {
+        var tid = (rows[i][1] || '').trim().toLowerCase().replace('@', '');
+        if (tid && tid === tgUsername) { ok = true; techName = (rows[i][0] || '').trim(); break; }
+      }
+      if (ok) {
+        document.getElementById('techName').textContent = techName;
+        loadForms();
+      } else {
+        document.getElementById('queueScreen').style.display = 'none';
+        document.getElementById('authScreen').style.display = 'block';
+      }
+    })
+    .catch(function() { document.getElementById('queueLoading').textContent = 'Failed to verify access.'; });
+}
+
+function loadForms() {
+  fetch(TG_PROXY + '/sheets/v4/spreadsheets/' + SHEET_ID + '/values/Lab%20Forms!A:U?key=' + API_KEY)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rows = data.values || [];
+      allForms = [];
+      for (var i = 1; i < rows.length; i++) {
+        var r = rows[i]; if (!r[0]) continue;
+        allForms.push({
+          rowIndex: i + 1, caseNumber: (r[0]||'').trim(), doctor: (r[1]||'').trim(),
+          clinic: (r[2]||'').trim(), patient: (r[3]||'').trim(),
+          totalUpper: (r[4]||'-').toString().trim(), totalLower: (r[5]||'-').toString().trim(),
+          upperPrint: (r[6]||'-').toString().trim(), lowerPrint: (r[7]||'-').toString().trim(),
+          asap: (r[8]||'').toString().trim().toUpperCase() === 'TRUE',
+          attachment: (r[9]||'').trim(), trimLine: (r[10]||'Straight').trim(),
+          dateCreated: (r[11]||'').trim(), status: (r[12]||'Pending').trim(),
+          totalModels: (r[13]||'').trim(), lSheets: (r[14]||'').trim(),
+          sSheets: (r[15]||'').trim(), rSheets: (r[16]||'').trim(),
+          aSheets: (r[17]||'').trim(), resinType: (r[18]||'').trim(),
+          dateLogged: (r[19]||'').trim(), loggedBy: (r[20]||'').trim()
+        });
+      }
+      document.getElementById('queueLoading').style.display = 'none';
+      renderQueue(); renderLogged();
+    })
+    .catch(function() { document.getElementById('queueLoading').textContent = 'Failed to load.'; });
+}
+
+function renderQueue() {
+  var c = document.getElementById('queueList'), ct = document.getElementById('queueCount');
+  var pending = allForms.filter(function(f) { return f.status === 'Pending'; });
+
+  // Sort: ASAP first, then by date (most recent first)
+  pending.sort(function(a, b) {
+    if (a.asap && !b.asap) return -1;
+    if (!a.asap && b.asap) return 1;
+    return 0;
+  });
+  pending.reverse();
+  // Re-sort so ASAP stays on top after reverse
+  pending.sort(function(a, b) {
+    if (a.asap && !b.asap) return -1;
+    if (!a.asap && b.asap) return 1;
+    return 0;
+  });
+
+  ct.style.display = 'block';
+  ct.textContent = pending.length + ' pending case' + (pending.length !== 1 ? 's' : '');
+  if (!pending.length) { c.innerHTML = '<div class="status-empty">No pending cases in the queue.</div>'; return; }
+  var h = '';
+  pending.forEach(function(f) {
+    var idx = allForms.indexOf(f);
+    h += '<div class="case-card" onclick="openDetail(' + idx + ')">';
+    h += '<div class="case-header"><span class="case-number">' + f.caseNumber + '</span>';
+    h += '<div style="display:flex;gap:6px;align-items:center">';
+    h += '<span class="case-type badge-pending">Pending</span>';
+    if (f.asap) h += '<span class="case-type badge-asap">⚡ ASAP</span>';
+    if (f.attachment === '0.5mm') h += '<span class="case-type badge-asap">0.5mm</span>';
+    h += '</div></div>';
+    h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
+    if (f.clinic) h += '<div class="case-date">' + f.clinic + '</div>';
+    h += '<div class="case-date">' + f.dateCreated + '</div>';
+    h += '<div class="case-steps">';
+    h += '<div class="step-box"><div class="step-label">Total Upper</div><div class="step-value">' + f.totalUpper + '</div></div>';
+    h += '<div class="step-box"><div class="step-label">Total Lower</div><div class="step-value">' + f.totalLower + '</div></div>';
+    h += '</div>';
+    h += '<div class="case-steps" style="margin-top:6px">';
+    h += '<div class="step-box"><div class="step-label">Upper To Print</div><div class="step-value">' + f.upperPrint + '</div></div>';
+    h += '<div class="step-box"><div class="step-label">Lower To Print</div><div class="step-value">' + f.lowerPrint + '</div></div>';
+    h += '</div></div>';
+  });
+  c.innerHTML = h;
+}
+
+function renderLogged() {
+  var c = document.getElementById('loggedList'), ct = document.getElementById('loggedCount');
+  var logged = allForms.filter(function(f) { return f.status === 'Logged'; });
+  logged.reverse();
+  ct.style.display = 'block';
+  ct.textContent = logged.length + ' logged case' + (logged.length !== 1 ? 's' : '');
+  if (!logged.length) { c.innerHTML = '<div class="status-empty">No logged cases yet.</div>'; return; }
+  var h = '';
+  logged.forEach(function(f) {
+    h += '<div class="case-card" style="cursor:default">';
+    h += '<div class="case-header"><span class="case-number">' + f.caseNumber + '</span>';
+    h += '<span class="case-type badge-logged">✓ Logged</span></div>';
+    h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
+    h += '<div class="case-date">Logged ' + f.dateLogged + ' by ' + f.loggedBy + '</div>';
+    h += '</div>';
+  });
+  c.innerHTML = h;
+}
+
+function switchTab(tab) {
+  document.getElementById('tabQueue').classList.toggle('active', tab === 'queue');
+  document.getElementById('tabLogged').classList.toggle('active', tab === 'logged');
+  document.getElementById('queueScreen').style.display = tab === 'queue' ? 'block' : 'none';
+  document.getElementById('loggedScreen').style.display = tab === 'logged' ? 'block' : 'none';
+  document.getElementById('detailScreen').style.display = 'none';
+  document.getElementById('successScreen').style.display = 'none';
+}
+
+function openDetail(idx) {
+  currentForm = allForms[idx];
+  document.getElementById('detCaseNum').textContent = currentForm.caseNumber;
+  document.getElementById('detDoctor').textContent = currentForm.doctor;
+  document.getElementById('detClinic').textContent = currentForm.clinic || '-';
+  document.getElementById('detPatient').textContent = currentForm.patient;
+  document.getElementById('detDate').textContent = currentForm.dateCreated;
+  document.getElementById('detTotalUpper').textContent = currentForm.totalUpper;
+  document.getElementById('detTotalLower').textContent = currentForm.totalLower;
+  document.getElementById('detUpperPrint').textContent = currentForm.upperPrint;
+  document.getElementById('detLowerPrint').textContent = currentForm.lowerPrint;
+  document.getElementById('detTrimLine').textContent = currentForm.trimLine;
+  document.getElementById('detAttachment').textContent = currentForm.attachment || 'Standard';
+  var a = document.getElementById('detAsap');
+  a.textContent = currentForm.asap ? 'YES' : 'No';
+  a.className = 'detail-value' + (currentForm.asap ? ' highlight' : '');
+  document.getElementById('inpModels').value = currentForm.totalModels || '';
+  document.getElementById('inpLSheets').value = currentForm.lSheets || '';
+  document.getElementById('inpSSheets').value = currentForm.sSheets || '';
+  document.getElementById('inpRSheets').value = currentForm.rSheets || '';
+  document.getElementById('inpASheets').value = currentForm.aSheets || '';
+  document.getElementById('inpResin').value = currentForm.resinType || '';
+  var btn = document.getElementById('logCaseBtn');
+  btn.disabled = false; btn.textContent = '✓ Log Case';
+  document.getElementById('queueScreen').style.display = 'none';
+  document.getElementById('loggedScreen').style.display = 'none';
+  document.getElementById('tabBar').style.display = 'none';
+  document.getElementById('detailScreen').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function showQueue() {
+  document.getElementById('detailScreen').style.display = 'none';
+  document.getElementById('tabBar').style.display = 'flex';
+  document.getElementById('queueScreen').style.display = 'block';
+}
+
+function logCase() {
+  var m = document.getElementById('inpModels').value.trim();
+  if (!m) { alert('Please enter Total Models'); document.getElementById('inpModels').focus(); return; }
+  var btn = document.getElementById('logCaseBtn');
+  btn.disabled = true; btn.textContent = 'Logging...';
+  var today = new Date().toLocaleDateString('en-GB');
+  var payload = {
+    caseNumber: currentForm.caseNumber, doctor: currentForm.doctor,
+    clinic: currentForm.clinic, patient: currentForm.patient,
+    totalUpper: currentForm.totalUpper, totalLower: currentForm.totalLower,
+    upperPrint: currentForm.upperPrint, lowerPrint: currentForm.lowerPrint,
+    asap: currentForm.asap, attachment: currentForm.attachment, trimLine: currentForm.trimLine,
+    totalModels: parseInt(m) || 0,
+    totalLSheets: parseFloat(document.getElementById('inpLSheets').value) || 0,
+    totalSSheets: parseFloat(document.getElementById('inpSSheets').value) || 0,
+    totalRSheets: parseFloat(document.getElementById('inpRSheets').value) || 0,
+    totalASheets: parseFloat(document.getElementById('inpASheets').value) || 0,
+    resinType: document.getElementById('inpResin').value.trim(),
+    rowIndex: currentForm.rowIndex, loggedBy: techName, dateLogged: today
+  };
+  if (USE_TEST_DATA) { setTimeout(function() { onLogSuccess(payload, today); }, 800); return; }
+  fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
+    .then(function(r) { if (!r.ok) throw new Error('Failed: ' + r.status); return r.text(); })
+    .then(function() { onLogSuccess(payload, today); })
+    .catch(function(e) { btn.disabled = false; btn.textContent = '✓ Log Case'; alert('Failed to log case.\n' + e.message); });
+}
+
+function onLogSuccess(p, today) {
+  currentForm.status = 'Logged';
+  currentForm.totalModels = String(p.totalModels);
+  currentForm.lSheets = String(p.totalLSheets);
+  currentForm.sSheets = String(p.totalSSheets);
+  currentForm.rSheets = String(p.totalRSheets);
+  currentForm.aSheets = String(p.totalASheets);
+  currentForm.resinType = p.resinType;
+  currentForm.dateLogged = today;
+  currentForm.loggedBy = techName;
+  document.getElementById('successMsg').textContent = currentForm.caseNumber + ' logged successfully.';
+  document.getElementById('detailScreen').style.display = 'none';
+  document.getElementById('successScreen').style.display = 'block';
+}
+
+function closeSuccess() {
+  document.getElementById('successScreen').style.display = 'none';
+  document.getElementById('tabBar').style.display = 'flex';
+  document.getElementById('queueScreen').style.display = 'block';
+  renderQueue(); renderLogged();
+}
+
+initApp();
+</script>
+</body>
+</html>
