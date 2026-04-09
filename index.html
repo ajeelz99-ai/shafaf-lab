@@ -201,46 +201,11 @@ var TG_PROXY = 'https://telegram-proxy.ajeelz99.workers.dev';
 var SHEET_ID = '1rTPjzpdkfXxBer8bUV2iQIRQ60yo31mIQMKdo8CkAeo';
 var API_KEY = 'AIzaSyDGBOFL9rSp3dPkQ1No5i5IXI27xL1-9ME';
 var WEBHOOK_URL = 'https://ajeelz99.app.n8n.cloud/webhook/dcbe16d0-dcd4-4e70-837d-413bbb75705b';
-var USE_TEST_DATA = false;
-
 var tgUsername = '', techName = '', allForms = [], currentForm = null;
-
-function getTestData() {
-  return [
-    { rowIndex:2, caseNumber:'R1/ 5NA6D', doctor:'Dr. Ali Hassan', clinic:'Al-Noor Clinic', patient:'Mohammed Ahmed',
-      totalUpper:'15', totalLower:'12', upperPrint:'1 to 8', lowerPrint:'1 to 7',
-      asap:true, attachment:'0.5mm', trimLine:'Scalloped', dateCreated:'09/04/2026', status:'Pending',
-      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
-    { rowIndex:3, caseNumber:'QKPGM', doctor:'Dr. Sara Al-Khatib', clinic:'Bright Smile Dental', patient:'Fatima Karim',
-      totalUpper:'20', totalLower:'18', upperPrint:'1 to 10 + R', lowerPrint:'1 to 9',
-      asap:false, attachment:'', trimLine:'Straight', dateCreated:'08/04/2026', status:'Pending',
-      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
-    { rowIndex:4, caseNumber:'MCA/ WG9P5', doctor:'Dr. Omar Faisal', clinic:'', patient:'Ahmad Radi',
-      totalUpper:'10', totalLower:'8', upperPrint:'1 to 5', lowerPrint:'1 to 4',
-      asap:false, attachment:'', trimLine:'Straight 2mm above gingiva', dateCreated:'07/04/2026', status:'Pending',
-      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
-    { rowIndex:5, caseNumber:'2nd/ B88ED', doctor:'Dr. Noor Al-Ani', clinic:'Noor Dental Center', patient:'Zainab Ali',
-      totalUpper:'24', totalLower:'22', upperPrint:'13 to 24 + R', lowerPrint:'12 to 22',
-      asap:true, attachment:'', trimLine:'Semi Scalloped', dateCreated:'06/04/2026', status:'Pending',
-      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
-    { rowIndex:6, caseNumber:'ZA44R', doctor:'Dr. Ali Hassan', clinic:'Al-Noor Clinic', patient:'Layla Mahmoud',
-      totalUpper:'12', totalLower:'12', upperPrint:'1 to 12 + R', lowerPrint:'1 to 12 + R',
-      asap:false, attachment:'0.5mm', trimLine:'Straight', dateCreated:'05/04/2026', status:'Pending',
-      totalModels:'', lSheets:'', sSheets:'', rSheets:'', aSheets:'', resinType:'', dateLogged:'', loggedBy:'' },
-    { rowIndex:7, caseNumber:'YJT48', doctor:'Dr. Omar Faisal', clinic:'', patient:'Ali Hassan',
-      totalUpper:'14', totalLower:'14', upperPrint:'1 to 14', lowerPrint:'1 to 14',
-      asap:false, attachment:'', trimLine:'Straight', dateCreated:'04/04/2026', status:'Logged',
-      totalModels:'28', lSheets:'3', sSheets:'2', rSheets:'1', aSheets:'0', resinType:'Uniz Grey 1KG', dateLogged:'05/04/2026', loggedBy:'Lab Tech 1' },
-    { rowIndex:8, caseNumber:'R2/ 33044', doctor:"Aseel Jum'a", clinic:"Jum'a Clinic", patient:'Maryam Saeed',
-      totalUpper:'18', totalLower:'16', upperPrint:'1 to 9', lowerPrint:'1 to 8',
-      asap:false, attachment:'', trimLine:'Scalloped', dateCreated:'03/04/2026', status:'Logged',
-      totalModels:'17', lSheets:'2', sSheets:'1.5', rSheets:'0.5', aSheets:'0', resinType:'Prodent Skin 500g', dateLogged:'04/04/2026', loggedBy:'Lab Tech 2' },
-  ];
-}
 
 function initApp() {
   var s = document.createElement('script');
-  s.src = 'https://telegram.org/js/telegram-web-app.js';
+  s.src = './telegram-web-app.js';
   s.onload = function() {
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -258,16 +223,7 @@ function initApp() {
 }
 
 function startApp() {
-  if (USE_TEST_DATA) {
-    techName = 'Test User';
-    document.getElementById('techName').textContent = techName;
-    allForms = getTestData();
-    document.getElementById('queueLoading').style.display = 'none';
-    renderQueue();
-    renderLogged();
-  } else {
-    checkAccess();
-  }
+  checkAccess();
 }
 
 function checkAccess() {
@@ -450,7 +406,6 @@ function logCase() {
     resinType: document.getElementById('inpResin').value.trim(),
     rowIndex: currentForm.rowIndex, loggedBy: techName, dateLogged: today
   };
-  if (USE_TEST_DATA) { setTimeout(function() { onLogSuccess(payload, today); }, 800); return; }
   fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
     .then(function(r) { if (!r.ok) throw new Error('Failed: ' + r.status); return r.text(); })
     .then(function() { onLogSuccess(payload, today); })
