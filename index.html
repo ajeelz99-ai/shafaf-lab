@@ -8,7 +8,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #ffffff; color: #1a1a1a; min-height: 100vh;
+  background: #f5f7fa; color: #1a1a1a; min-height: 100vh;
 }
 .header {
   background: #1a73e8; color: white; padding: 16px; text-align: center;
@@ -16,7 +16,6 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .header-sub { font-size: 12px; font-weight: 400; opacity: 0.85; margin-top: 2px; }
-.form-container { max-width: 500px; margin: 0 auto; padding: 16px; }
 .tab-bar {
   display: flex; background: white; border-bottom: 1.5px solid #e0e0e0;
   position: sticky; top: 52px; z-index: 49;
@@ -26,6 +25,7 @@ body {
   color: #666; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer;
 }
 .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+.form-container { max-width: 500px; margin: 0 auto; padding: 16px; }
 .card {
   background: white; border-radius: 12px; padding: 16px;
   margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -36,9 +36,13 @@ body {
 }
 .case-card {
   background: white; border-radius: 12px; padding: 14px;
-  margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer;
+  margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s;
 }
 .case-card:active { background: #f8f9ff; }
+.case-card.logging { border-color: #1a73e8; background: #f0f6ff; cursor: default; }
+.case-card.error { border-color: #c62828; }
+.case-card.logged-card { cursor: pointer; }
 .case-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .case-number { font-size: 15px; font-weight: 700; color: #1a73e8; }
 .case-type {
@@ -62,7 +66,7 @@ input[type="text"], input[type="number"], select {
   background: #fafafa; color: #1a1a1a; font-size: 15px; outline: none;
   -webkit-appearance: none; appearance: none;
 }
-input:focus { border-color: #1a73e8; background: white; }
+input:focus, select:focus { border-color: #1a73e8; background: white; }
 .row { display: flex; gap: 10px; }
 .row .form-group { flex: 1; }
 .detail-row {
@@ -80,6 +84,7 @@ input:focus { border-color: #1a73e8; background: white; }
 }
 .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .submit-btn.green { background: #2e7d32; }
+.submit-btn.orange { background: #e65100; }
 .back-btn {
   background: none; border: none; color: #1a73e8; font-size: 14px;
   font-weight: 600; cursor: pointer; padding: 8px 0; margin-bottom: 8px;
@@ -87,13 +92,25 @@ input:focus { border-color: #1a73e8; background: white; }
 .status-count { font-size: 12px; color: #999; margin-bottom: 12px; }
 .status-empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
 .status-loading { text-align: center; padding: 40px; color: #999; font-size: 14px; }
-#successScreen {
-  display: none; text-align: center; padding: 80px 24px;
-  max-width: 500px; margin: 0 auto;
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2.5px solid #c5dcf8; border-top-color: #1a73e8;
+  border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle;
 }
-.success-icon { font-size: 72px; margin-bottom: 20px; }
-.success-title { font-size: 26px; font-weight: 700; margin-bottom: 10px; color: #1a1a1a; }
-.success-sub { font-size: 15px; color: #666; line-height: 1.6; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.logging-state {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px;
+  color: #1565c0; font-size: 13px; font-weight: 600;
+}
+.error-state {
+  margin-top: 8px; padding: 8px 10px; background: #fff5f5;
+  border-radius: 8px; color: #c62828; font-size: 12px; font-weight: 600;
+}
+.edit-banner {
+  background: #fff8e1; border: 1.5px solid #f9a825; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 12px; font-size: 13px;
+  color: #e65100; font-weight: 600;
+}
 </style>
 </head>
 <body>
@@ -133,7 +150,8 @@ input:focus { border-color: #1a73e8; background: white; }
 
 <div id="detailScreen" style="display:none">
   <div class="form-container">
-    <button class="back-btn" onclick="showQueue()">← Back to Queue</button>
+    <button class="back-btn" id="detailBackBtn" onclick="goBackFromDetail()">← Back to Queue</button>
+    <div class="edit-banner" id="editBanner" style="display:none">✏️ Edit Mode — changes will update the Lab Form and Production Order</div>
 
     <div class="card">
       <div class="section-title">Case Information</div>
@@ -185,27 +203,21 @@ input:focus { border-color: #1a73e8; background: white; }
       </div>
     </div>
 
-    <button class="submit-btn green" id="logCaseBtn" onclick="logCase()">✓ Log Case</button>
-  </div>
-</div>
-
-<div id="successScreen">
-  <div class="success-icon">✅</div>
-  <div class="success-title">Case Logged!</div>
-  <div class="success-sub" id="successMsg"></div>
-  <div style="margin-top:24px">
-    <button class="submit-btn" onclick="closeSuccess()" style="max-width:240px;margin:0 auto;display:block">Back to Queue</button>
+    <button class="submit-btn green" id="logCaseBtn" onclick="submitDetail()">✓ Log Case</button>
   </div>
 </div>
 
 <script>
-var TG_PROXY = 'https://telegram-proxy.ajeelz99.workers.dev';
 var SHEET_ID = '1rTPjzpdkfXxBer8bUV2iQIRQ60yo31mIQMKdo8CkAeo';
 var API_KEY = 'AIzaSyDGBOFL9rSp3dPkQ1No5i5IXI27xL1-9ME';
 var WEBHOOK_URL = 'https://ajeelz99.app.n8n.cloud/webhook/dcbe16d0-dcd4-4e70-837d-413bbb75705b';
-var tgUsername = '', techName = '', allForms = [], currentForm = null;
-var resinList = [];
+var EDIT_WEBHOOK_URL = 'https://ajeelz99.app.n8n.cloud/webhook/dcbe16d0-dcd4-4e70-837d-413bbb75705b';
 var DASHBOARD_SHEET_ID = '1ToxldsqvuQUfI__xNoaxOwNG0iYx6FgkJC0hpngd0h8';
+
+var tgUsername = '', techName = '';
+var allForms = [], currentFormIdx = null, isEditMode = false;
+var resinList = [];
+var cardStates = {}; // rowIndex -> { state: 'logging'|'error', msg: '' }
 
 function initApp() {
   var s = document.createElement('script');
@@ -219,16 +231,11 @@ function initApp() {
     }
     startApp();
   };
-  s.onerror = function() {
-    // Script blocked or failed — continue anyway
-    startApp();
-  };
+  s.onerror = function() { startApp(); };
   document.head.appendChild(s);
 }
 
-function startApp() {
-  checkAccess();
-}
+function startApp() { checkAccess(); }
 
 function checkAccess() {
   fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/Technicians!A:B?key=' + API_KEY)
@@ -281,66 +288,101 @@ function loadForms() {
       for (var i = 1; i < rows.length; i++) {
         var r = rows[i]; if (!r[0]) continue;
         allForms.push({
-          rowIndex: i + 1, caseNumber: (r[0]||'').trim(), doctor: (r[1]||'').trim(),
-          clinic: (r[2]||'').trim(), patient: (r[3]||'').trim(),
-          totalUpper: (r[4]||'-').toString().trim(), totalLower: (r[5]||'-').toString().trim(),
-          upperPrint: (r[6]||'-').toString().trim(), lowerPrint: (r[7]||'-').toString().trim(),
+          rowIndex: i + 1,
+          caseNumber: (r[0]||'').trim(),
+          doctor: (r[1]||'').trim(),
+          clinic: (r[2]||'').trim(),
+          patient: (r[3]||'').trim(),
+          totalUpper: (r[4]||'-').toString().trim(),
+          totalLower: (r[5]||'-').toString().trim(),
+          upperPrint: (r[6]||'-').toString().trim(),
+          lowerPrint: (r[7]||'-').toString().trim(),
           asap: (r[8]||'').toString().trim().toUpperCase() === 'TRUE',
-          attachment: (r[9]||'').trim(), trimLine: (r[10]||'Straight').trim(),
-          dateCreated: (r[11]||'').trim(), status: (r[12]||'Pending').trim(),
-          totalModels: (r[13]||'').trim(), lSheets: (r[14]||'').trim(),
-          sSheets: (r[15]||'').trim(), rSheets: (r[16]||'').trim(),
-          aSheets: (r[17]||'').trim(), resinType: (r[18]||'').trim(),
-          dateLogged: (r[19]||'').trim(), loggedBy: (r[20]||'').trim()
+          attachment: (r[9]||'').trim(),
+          trimLine: (r[10]||'Straight').trim(),
+          dateCreated: (r[11]||'').trim(),
+          status: (r[12]||'Pending').trim(),
+          totalModels: (r[13]||'').trim(),
+          lSheets: (r[14]||'').trim(),
+          sSheets: (r[15]||'').trim(),
+          rSheets: (r[16]||'').trim(),
+          aSheets: (r[17]||'').trim(),
+          resinType: (r[18]||'').trim(),
+          dateLogged: (r[19]||'').trim(),
+          loggedBy: (r[20]||'').trim()
         });
       }
       document.getElementById('queueLoading').style.display = 'none';
-      renderQueue(); renderLogged();
+      renderQueue();
+      renderLogged();
     })
     .catch(function() { document.getElementById('queueLoading').textContent = 'Failed to load.'; });
 }
 
+function parseDate(str) {
+  if (!str) return 0;
+  var parts = str.split('/');
+  if (parts.length !== 3) return 0;
+  return parseInt(parts[2]) * 10000 + parseInt(parts[1]) * 100 + parseInt(parts[0]);
+}
+
 function renderQueue() {
-  var c = document.getElementById('queueList'), ct = document.getElementById('queueCount');
+  var c = document.getElementById('queueList');
+  var ct = document.getElementById('queueCount');
   var pending = allForms.filter(function(f) { return f.status === 'Pending'; });
 
-  // Sort: ASAP first, then by date (most recent first)
   pending.sort(function(a, b) {
     if (a.asap && !b.asap) return -1;
     if (!a.asap && b.asap) return 1;
-    return 0;
-  });
-  pending.reverse();
-  // Re-sort so ASAP stays on top after reverse
-  pending.sort(function(a, b) {
-    if (a.asap && !b.asap) return -1;
-    if (!a.asap && b.asap) return 1;
-    return 0;
+    return parseDate(a.dateCreated) - parseDate(b.dateCreated);
   });
 
   ct.style.display = 'block';
   ct.textContent = pending.length + ' pending case' + (pending.length !== 1 ? 's' : '');
-  if (!pending.length) { c.innerHTML = '<div class="status-empty">No pending cases in the queue.</div>'; return; }
+  if (!pending.length) {
+    c.innerHTML = '<div class="status-empty">No pending cases in the queue.</div>';
+    return;
+  }
+
   var h = '';
   pending.forEach(function(f) {
     var idx = allForms.indexOf(f);
-    h += '<div class="case-card" onclick="openDetail(' + idx + ')">';
+    var state = cardStates[f.rowIndex] || {};
+    var isLogging = state.state === 'logging';
+    var isError = state.state === 'error';
+    var cardClass = 'case-card' + (isLogging ? ' logging' : '') + (isError ? ' error' : '');
+    var onclick = isLogging ? '' : 'onclick="openDetail(' + idx + ', false)"';
+
+    h += '<div class="' + cardClass + '" ' + onclick + '>';
     h += '<div class="case-header"><span class="case-number">' + f.caseNumber + '</span>';
-    h += '<span class="case-type badge-pending">Pending</span>';
+    if (isLogging) {
+      h += '<span class="case-type" style="background:#e3f2fd;color:#1565c0">Logging...</span>';
+    } else {
+      h += '<span class="case-type badge-pending">Pending</span>';
+    }
     h += '</div>';
+
     var flags = [];
     if (f.asap) flags.push('<span class="case-type badge-asap">⚡ ASAP</span>');
     if (f.attachment === '0.5mm') flags.push('<span class="case-type badge-asap">0.5mm Attachment</span>');
     if (f.trimLine && f.trimLine !== 'Straight') flags.push('<span class="case-type badge-asap">' + f.trimLine + '</span>');
     if (flags.length) h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">' + flags.join('') + '</div>';
+
     h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
     if (f.clinic) h += '<div class="case-date">' + f.clinic + '</div>';
     h += '<div class="case-date">' + f.dateCreated + '</div>';
+
+    if (isLogging) {
+      h += '<div class="logging-state"><div class="spinner"></div>Logging case, please wait...</div>';
+    }
+    if (isError) {
+      h += '<div class="error-state">⚠️ ' + (state.msg || 'Failed to log. Tap to retry.') + '</div>';
+    }
+
     h += '<div class="case-steps">';
     h += '<div class="step-box"><div class="step-label">Total Upper</div><div class="step-value">' + f.totalUpper + '</div></div>';
     h += '<div class="step-box"><div class="step-label">Total Lower</div><div class="step-value">' + f.totalLower + '</div></div>';
-    h += '</div>';
-    h += '<div class="case-steps" style="margin-top:6px">';
+    h += '</div><div class="case-steps" style="margin-top:6px">';
     h += '<div class="step-box"><div class="step-label">Upper To Print</div><div class="step-value">' + f.upperPrint + '</div></div>';
     h += '<div class="step-box"><div class="step-label">Lower To Print</div><div class="step-value">' + f.lowerPrint + '</div></div>';
     h += '</div></div>';
@@ -349,19 +391,32 @@ function renderQueue() {
 }
 
 function renderLogged() {
-  var c = document.getElementById('loggedList'), ct = document.getElementById('loggedCount');
+  var c = document.getElementById('loggedList');
+  var ct = document.getElementById('loggedCount');
   var logged = allForms.filter(function(f) { return f.status === 'Logged'; });
-  logged.reverse();
+  logged.sort(function(a, b) { return parseDate(b.dateLogged) - parseDate(a.dateLogged); });
+
   ct.style.display = 'block';
   ct.textContent = logged.length + ' logged case' + (logged.length !== 1 ? 's' : '');
-  if (!logged.length) { c.innerHTML = '<div class="status-empty">No logged cases yet.</div>'; return; }
+  if (!logged.length) {
+    c.innerHTML = '<div class="status-empty">No logged cases yet.</div>';
+    return;
+  }
+
   var h = '';
   logged.forEach(function(f) {
-    h += '<div class="case-card" style="cursor:default">';
+    var idx = allForms.indexOf(f);
+    h += '<div class="case-card logged-card" onclick="openDetail(' + idx + ', true)">';
     h += '<div class="case-header"><span class="case-number">' + f.caseNumber + '</span>';
     h += '<span class="case-type badge-logged">✓ Logged</span></div>';
     h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
-    h += '<div class="case-date">Logged ' + f.dateLogged + ' by ' + f.loggedBy + '</div>';
+    h += '<div class="case-date">Logged ' + (f.dateLogged || '-') + ' by ' + (f.loggedBy || '-') + '</div>';
+    if (f.totalModels) {
+      h += '<div class="case-date" style="margin-top:4px">Models: ' + f.totalModels;
+      if (f.resinType) h += ' · ' + f.resinType;
+      h += '</div>';
+    }
+    h += '<div style="margin-top:8px;text-align:right"><span style="font-size:12px;color:#1a73e8;font-weight:600">✏️ Edit</span></div>';
     h += '</div>';
   });
   c.innerHTML = h;
@@ -373,33 +428,52 @@ function switchTab(tab) {
   document.getElementById('queueScreen').style.display = tab === 'queue' ? 'block' : 'none';
   document.getElementById('loggedScreen').style.display = tab === 'logged' ? 'block' : 'none';
   document.getElementById('detailScreen').style.display = 'none';
-  document.getElementById('successScreen').style.display = 'none';
 }
 
-function openDetail(idx) {
-  currentForm = allForms[idx];
-  document.getElementById('detCaseNum').textContent = currentForm.caseNumber;
-  document.getElementById('detDoctor').textContent = currentForm.doctor;
-  document.getElementById('detClinic').textContent = currentForm.clinic || '-';
-  document.getElementById('detPatient').textContent = currentForm.patient;
-  document.getElementById('detDate').textContent = currentForm.dateCreated;
-  document.getElementById('detTotalUpper').textContent = currentForm.totalUpper;
-  document.getElementById('detTotalLower').textContent = currentForm.totalLower;
-  document.getElementById('detUpperPrint').textContent = currentForm.upperPrint;
-  document.getElementById('detLowerPrint').textContent = currentForm.lowerPrint;
-  document.getElementById('detTrimLine').textContent = currentForm.trimLine;
-  document.getElementById('detAttachment').textContent = currentForm.attachment || 'Standard';
+function openDetail(idx, editMode) {
+  currentFormIdx = idx;
+  isEditMode = editMode || false;
+  var f = allForms[idx];
+
+  document.getElementById('detCaseNum').textContent = f.caseNumber;
+  document.getElementById('detDoctor').textContent = f.doctor;
+  document.getElementById('detClinic').textContent = f.clinic || '-';
+  document.getElementById('detPatient').textContent = f.patient;
+  document.getElementById('detDate').textContent = f.dateCreated;
+  document.getElementById('detTotalUpper').textContent = f.totalUpper;
+  document.getElementById('detTotalLower').textContent = f.totalLower;
+  document.getElementById('detUpperPrint').textContent = f.upperPrint;
+  document.getElementById('detLowerPrint').textContent = f.lowerPrint;
+  document.getElementById('detTrimLine').textContent = f.trimLine;
+  document.getElementById('detAttachment').textContent = f.attachment || 'Standard';
   var a = document.getElementById('detAsap');
-  a.textContent = currentForm.asap ? 'YES' : 'No';
-  a.className = 'detail-value' + (currentForm.asap ? ' highlight' : '');
-  document.getElementById('inpModels').value = currentForm.totalModels || '';
-  document.getElementById('inpLSheets').value = currentForm.lSheets || '';
-  document.getElementById('inpSSheets').value = currentForm.sSheets || '';
-  document.getElementById('inpRSheets').value = currentForm.rSheets || '';
-  document.getElementById('inpASheets').value = currentForm.aSheets || '';
-  document.getElementById('inpResin').value = currentForm.resinType || '';
+  a.textContent = f.asap ? 'YES' : 'No';
+  a.className = 'detail-value' + (f.asap ? ' highlight' : '');
+
+  document.getElementById('inpModels').value = f.totalModels || '';
+  document.getElementById('inpLSheets').value = f.lSheets || '';
+  document.getElementById('inpSSheets').value = f.sSheets || '';
+  document.getElementById('inpRSheets').value = f.rSheets || '';
+  document.getElementById('inpASheets').value = f.aSheets || '';
+  document.getElementById('inpResin').value = f.resinType || '';
+
   var btn = document.getElementById('logCaseBtn');
-  btn.disabled = false; btn.textContent = '✓ Log Case';
+  var banner = document.getElementById('editBanner');
+  var backBtn = document.getElementById('detailBackBtn');
+
+  if (isEditMode) {
+    btn.textContent = '💾 Save Changes';
+    btn.className = 'submit-btn orange';
+    banner.style.display = 'block';
+    backBtn.textContent = '← Back to Logged';
+  } else {
+    btn.textContent = '✓ Log Case';
+    btn.className = 'submit-btn green';
+    banner.style.display = 'none';
+    backBtn.textContent = '← Back to Queue';
+  }
+  btn.disabled = false;
+
   document.getElementById('queueScreen').style.display = 'none';
   document.getElementById('loggedScreen').style.display = 'none';
   document.getElementById('tabBar').style.display = 'none';
@@ -407,58 +481,131 @@ function openDetail(idx) {
   window.scrollTo(0, 0);
 }
 
-function showQueue() {
+function goBackFromDetail() {
   document.getElementById('detailScreen').style.display = 'none';
   document.getElementById('tabBar').style.display = 'flex';
-  document.getElementById('queueScreen').style.display = 'block';
+  if (isEditMode) {
+    document.getElementById('loggedScreen').style.display = 'block';
+    document.getElementById('tabQueue').classList.remove('active');
+    document.getElementById('tabLogged').classList.add('active');
+  } else {
+    document.getElementById('queueScreen').style.display = 'block';
+    document.getElementById('tabQueue').classList.add('active');
+    document.getElementById('tabLogged').classList.remove('active');
+  }
+}
+
+function submitDetail() {
+  if (isEditMode) { saveEdit(); } else { logCase(); }
 }
 
 function logCase() {
   var m = document.getElementById('inpModels').value.trim();
   if (!m) { alert('Please enter Total Models'); document.getElementById('inpModels').focus(); return; }
-  var btn = document.getElementById('logCaseBtn');
-  btn.disabled = true; btn.textContent = 'Logging...';
+
+  var f = allForms[currentFormIdx];
   var today = new Date().toLocaleDateString('en-GB');
   var payload = {
-    caseNum: currentForm.caseNumber, doctor: currentForm.doctor,
-    clinic: currentForm.clinic, patient: currentForm.patient,
-    totalUpper: currentForm.totalUpper, totalLower: currentForm.totalLower,
-    upperPrint: currentForm.upperPrint, lowerPrint: currentForm.lowerPrint,
-    asap: currentForm.asap, attachment: currentForm.attachment, trimLine: currentForm.trimLine,
+    caseNum: f.caseNumber, doctor: f.doctor,
+    clinic: f.clinic, patient: f.patient,
+    totalUpper: f.totalUpper, totalLower: f.totalLower,
+    upperPrint: f.upperPrint, lowerPrint: f.lowerPrint,
+    asap: f.asap, attachment: f.attachment, trimLine: f.trimLine,
     totalModels: parseInt(m) || 0,
     totalLSheets: parseFloat(document.getElementById('inpLSheets').value) || 0,
     totalSSheets: parseFloat(document.getElementById('inpSSheets').value) || 0,
     totalRSheets: parseFloat(document.getElementById('inpRSheets').value) || 0,
     totalASheets: parseFloat(document.getElementById('inpASheets').value) || 0,
     resinType: document.getElementById('inpResin').value.trim(),
-    rowIndex: currentForm.rowIndex, loggedBy: techName, dateLogged: today
+    rowIndex: f.rowIndex, loggedBy: techName, dateLogged: today
   };
-  fetch(WEBHOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
-    .then(function(r) { if (!r.ok) throw new Error('Failed: ' + r.status); return r.text(); })
-    .then(function() { onLogSuccess(payload, today); })
-    .catch(function(e) { btn.disabled = false; btn.textContent = '✓ Log Case'; alert('Failed to log case.\n' + e.message); });
-}
 
-function onLogSuccess(p, today) {
-  currentForm.status = 'Logged';
-  currentForm.totalModels = String(p.totalModels);
-  currentForm.lSheets = String(p.totalLSheets);
-  currentForm.sSheets = String(p.totalSSheets);
-  currentForm.rSheets = String(p.totalRSheets);
-  currentForm.aSheets = String(p.totalASheets);
-  currentForm.resinType = p.resinType;
-  currentForm.dateLogged = today;
-  currentForm.loggedBy = techName;
-  document.getElementById('successMsg').textContent = currentForm.caseNumber + ' logged successfully.';
+  // Return to queue and show spinner on card
   document.getElementById('detailScreen').style.display = 'none';
-  document.getElementById('successScreen').style.display = 'block';
-}
-
-function closeSuccess() {
-  document.getElementById('successScreen').style.display = 'none';
   document.getElementById('tabBar').style.display = 'flex';
   document.getElementById('queueScreen').style.display = 'block';
-  renderQueue(); renderLogged();
+  document.getElementById('tabQueue').classList.add('active');
+  document.getElementById('tabLogged').classList.remove('active');
+  cardStates[f.rowIndex] = { state: 'logging', msg: '' };
+  renderQueue();
+  window.scrollTo(0, 0);
+
+  fetch(WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.success === false) throw new Error(data.error || 'Workflow error');
+      delete cardStates[f.rowIndex];
+      f.status = 'Logged';
+      f.totalModels = String(payload.totalModels);
+      f.lSheets = String(payload.totalLSheets);
+      f.sSheets = String(payload.totalSSheets);
+      f.rSheets = String(payload.totalRSheets);
+      f.aSheets = String(payload.totalASheets);
+      f.resinType = payload.resinType;
+      f.dateLogged = today;
+      f.loggedBy = techName;
+      renderQueue();
+      renderLogged();
+      switchTab('logged');
+    })
+    .catch(function(e) {
+      cardStates[f.rowIndex] = { state: 'error', msg: e.message || 'Failed to log. Tap to retry.' };
+      renderQueue();
+    });
+}
+
+function saveEdit() {
+  var m = document.getElementById('inpModels').value.trim();
+  if (!m) { alert('Please enter Total Models'); document.getElementById('inpModels').focus(); return; }
+
+  var f = allForms[currentFormIdx];
+  var btn = document.getElementById('logCaseBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  var payload = {
+    caseNum: f.caseNumber,
+    rowIndex: f.rowIndex,
+    loggedBy: f.loggedBy || techName,
+    dateLogged: f.dateLogged || new Date().toLocaleDateString('en-GB'),
+    totalModels: parseInt(m) || 0,
+    totalLSheets: parseFloat(document.getElementById('inpLSheets').value) || 0,
+    totalSSheets: parseFloat(document.getElementById('inpSSheets').value) || 0,
+    totalRSheets: parseFloat(document.getElementById('inpRSheets').value) || 0,
+    totalASheets: parseFloat(document.getElementById('inpASheets').value) || 0,
+    resinType: document.getElementById('inpResin').value.trim(),
+    isEdit: true
+  };
+
+  fetch(EDIT_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.success === false) throw new Error(data.error || 'Failed to save');
+      f.totalModels = String(payload.totalModels);
+      f.lSheets = String(payload.totalLSheets);
+      f.sSheets = String(payload.totalSSheets);
+      f.rSheets = String(payload.totalRSheets);
+      f.aSheets = String(payload.totalASheets);
+      f.resinType = payload.resinType;
+      renderLogged();
+      document.getElementById('detailScreen').style.display = 'none';
+      document.getElementById('tabBar').style.display = 'flex';
+      document.getElementById('loggedScreen').style.display = 'block';
+      document.getElementById('tabQueue').classList.remove('active');
+      document.getElementById('tabLogged').classList.add('active');
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      btn.textContent = '💾 Save Changes';
+      alert('Failed to save changes.\n' + (e.message || 'Unknown error'));
+    });
 }
 
 initApp();
