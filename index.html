@@ -331,9 +331,11 @@ function renderQueue() {
   var ct = document.getElementById('queueCount');
   var pending = allForms.filter(function(f) { return f.status === 'Pending'; });
 
-  pending.sort(function(a, b) {
-    if (a.asap && !b.asap) return -1;
-    if (!a.asap && b.asap) return 1;
+pending.sort(function(a, b) {
+    var aPriority = a.asap || /^retainer/i.test(a.caseNumber);
+    var bPriority = b.asap || /^retainer/i.test(b.caseNumber);
+    if (aPriority && !bPriority) return -1;
+    if (!aPriority && bPriority) return 1;
     return parseDate(a.dateCreated) - parseDate(b.dateCreated);
   });
 
@@ -520,7 +522,7 @@ function logCase() {
     rowIndex: f.rowIndex, loggedBy: techName, dateLogged: today
   };
 
-  // Return to queue and show spinner on card
+  // Return to queue immediately and show spinner on card
   document.getElementById('detailScreen').style.display = 'none';
   document.getElementById('tabBar').style.display = 'flex';
   document.getElementById('queueScreen').style.display = 'block';
@@ -533,11 +535,17 @@ function logCase() {
   fetch(WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    keepalive: true   // ← keeps request alive if Telegram is closed mid-flight
   })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) throw new Error('Server error: ' + r.status);
+      // Parse JSON but don't fail if body is truncated (e.g. connection closed after send)
+      return r.json().catch(function() { return { success: true }; });
+    })
     .then(function(data) {
       if (data && data.success === false) throw new Error(data.error || 'Workflow error');
+      // Success
       delete cardStates[f.rowIndex];
       f.status = 'Logged';
       f.totalModels = String(payload.totalModels);
@@ -553,11 +561,18 @@ function logCase() {
       switchTab('logged');
     })
     .catch(function(e) {
+      // If the browser aborted the fetch (page closed mid-request), treat as success
+      if (e && e.name === 'AbortError') {
+        delete cardStates[f.rowIndex];
+        f.status = 'Logged';
+        renderQueue();
+        return;
+      }
+      // Real error — show red card
       cardStates[f.rowIndex] = { state: 'error', msg: e.message || 'Failed to log. Tap to retry.' };
       renderQueue();
     });
 }
-
 function saveEdit() {
   var m = document.getElementById('inpModels').value.trim();
   if (!m) { alert('Please enter Total Models'); document.getElementById('inpModels').focus(); return; }
