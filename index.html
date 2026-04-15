@@ -112,9 +112,9 @@ input:focus, select:focus { border-color: #1a73e8; background: white; }
   color: #e65100; font-weight: 600;
 }
 .case-notes {
-  margin-top: 6px; padding: 6px 8px; background: #fff8e1;
+  margin-top: 8px; padding: 6px 8px; background: #fff8e1;
   border-radius: 6px; font-size: 12px; color: #555;
-  border: 1px dashed #e0e0e0;
+  border: 1px dashed #e0e0e0; word-break: break-word;
 }
 </style>
 </head>
@@ -165,7 +165,10 @@ input:focus, select:focus { border-color: #1a73e8; background: white; }
       <div class="detail-row"><span class="detail-label">Clinic</span><span class="detail-value" id="detClinic"></span></div>
       <div class="detail-row"><span class="detail-label">Patient</span><span class="detail-value" id="detPatient"></span></div>
       <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value" id="detDate"></span></div>
-      <div class="detail-row" id="detNotesRow" style="display:none"><span class="detail-label">Notes</span><span class="detail-value" id="detNotes" style="color:#555;font-weight:500"></span></div>
+      <div class="detail-row" id="detNotesRow" style="display:none">
+        <span class="detail-label">Notes</span>
+        <span class="detail-value" id="detNotes" style="color:#555;font-weight:500;max-width:60%;text-align:right"></span>
+      </div>
     </div>
 
     <div class="card">
@@ -286,7 +289,6 @@ function loadResins() {
 }
 
 function loadForms() {
-  // FIX 2: Changed A:U to A:V to include notes column
   fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/Lab%20Forms!A:V?key=' + API_KEY)
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -317,7 +319,7 @@ function loadForms() {
           resinType: (r[18]||'').trim(),
           dateLogged: (r[19]||'').trim(),
           loggedBy: (r[20]||'').trim(),
-          notes: (r[21]||'').trim()  // FIX 2: Added notes from column V
+          notes: (r[21]||'').trim()
         });
       }
       document.getElementById('queueLoading').style.display = 'none';
@@ -332,6 +334,16 @@ function parseDate(str) {
   var parts = str.split('/');
   if (parts.length !== 3) return 0;
   return parseInt(parts[2]) * 10000 + parseInt(parts[1]) * 100 + parseInt(parts[0]);
+}
+
+function expandNote(id) {
+  document.getElementById(id + '-short').style.display = 'none';
+  document.getElementById(id + '-full').style.display = 'inline';
+}
+
+function collapseNote(id) {
+  document.getElementById(id + '-full').style.display = 'none';
+  document.getElementById(id + '-short').style.display = 'inline';
 }
 
 function renderQueue() {
@@ -378,12 +390,23 @@ function renderQueue() {
     if (f.trimLine && f.trimLine !== 'Straight') flags.push('<span class="case-type badge-asap">' + f.trimLine + '</span>');
     if (flags.length) h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">' + flags.join('') + '</div>';
 
-    // FIX 3: Show notes on queue card
-    if (f.notes) h += '<div class="case-notes">📝 ' + f.notes + '</div>';
-
     h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
     if (f.clinic) h += '<div class="case-date">' + f.clinic + '</div>';
     h += '<div class="case-date">' + f.dateCreated + '</div>';
+
+    if (f.notes) {
+      var noteId = 'note-' + f.rowIndex;
+      var isLong = f.notes.length > 80;
+      h += '<div class="case-notes">';
+      h += '📝 ';
+      if (isLong) {
+        h += '<span id="' + noteId + '-short">' + f.notes.substring(0, 80) + '... <button onclick="event.stopPropagation();expandNote(\'' + noteId + '\')" style="background:none;border:none;color:#1a73e8;font-size:12px;font-weight:600;cursor:pointer;padding:0">Show more</button></span>';
+        h += '<span id="' + noteId + '-full" style="display:none">' + f.notes + ' <button onclick="event.stopPropagation();collapseNote(\'' + noteId + '\')" style="background:none;border:none;color:#1a73e8;font-size:12px;font-weight:600;cursor:pointer;padding:0">Show less</button></span>';
+      } else {
+        h += f.notes;
+      }
+      h += '</div>';
+    }
 
     if (isLogging) {
       h += '<div class="logging-state"><div class="spinner"></div>Logging case, please wait...</div>';
@@ -463,7 +486,6 @@ function openDetail(idx, editMode) {
   a.textContent = f.asap ? 'YES' : 'No';
   a.className = 'detail-value' + (f.asap ? ' highlight' : '');
 
-  // Show notes in detail screen if present
   var notesRow = document.getElementById('detNotesRow');
   var notesEl = document.getElementById('detNotes');
   if (f.notes) {
