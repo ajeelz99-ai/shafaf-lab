@@ -111,6 +111,11 @@ input:focus, select:focus { border-color: #1a73e8; background: white; }
   padding: 10px 14px; margin-bottom: 12px; font-size: 13px;
   color: #e65100; font-weight: 600;
 }
+.case-notes {
+  margin-top: 6px; padding: 6px 8px; background: #fff8e1;
+  border-radius: 6px; font-size: 12px; color: #555;
+  border: 1px dashed #e0e0e0;
+}
 </style>
 </head>
 <body>
@@ -160,6 +165,7 @@ input:focus, select:focus { border-color: #1a73e8; background: white; }
       <div class="detail-row"><span class="detail-label">Clinic</span><span class="detail-value" id="detClinic"></span></div>
       <div class="detail-row"><span class="detail-label">Patient</span><span class="detail-value" id="detPatient"></span></div>
       <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value" id="detDate"></span></div>
+      <div class="detail-row" id="detNotesRow" style="display:none"><span class="detail-label">Notes</span><span class="detail-value" id="detNotes" style="color:#555;font-weight:500"></span></div>
     </div>
 
     <div class="card">
@@ -217,7 +223,7 @@ var DASHBOARD_SHEET_ID = '1ToxldsqvuQUfI__xNoaxOwNG0iYx6FgkJC0hpngd0h8';
 var tgUsername = '', techName = '';
 var allForms = [], currentFormIdx = null, isEditMode = false;
 var resinList = [];
-var cardStates = {}; // rowIndex -> { state: 'logging'|'error', msg: '' }
+var cardStates = {};
 
 function initApp() {
   var s = document.createElement('script');
@@ -280,7 +286,8 @@ function loadResins() {
 }
 
 function loadForms() {
-  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/Lab%20Forms!A:U?key=' + API_KEY)
+  // FIX 2: Changed A:U to A:V to include notes column
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/Lab%20Forms!A:V?key=' + API_KEY)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rows = data.values || [];
@@ -309,7 +316,8 @@ function loadForms() {
           aSheets: (r[17]||'').trim(),
           resinType: (r[18]||'').trim(),
           dateLogged: (r[19]||'').trim(),
-          loggedBy: (r[20]||'').trim()
+          loggedBy: (r[20]||'').trim(),
+          notes: (r[21]||'').trim()  // FIX 2: Added notes from column V
         });
       }
       document.getElementById('queueLoading').style.display = 'none';
@@ -331,7 +339,7 @@ function renderQueue() {
   var ct = document.getElementById('queueCount');
   var pending = allForms.filter(function(f) { return f.status === 'Pending'; });
 
-pending.sort(function(a, b) {
+  pending.sort(function(a, b) {
     var aPriority = a.asap || /^retainer/i.test(a.caseNumber);
     var bPriority = b.asap || /^retainer/i.test(b.caseNumber);
     if (aPriority && !bPriority) return -1;
@@ -369,6 +377,9 @@ pending.sort(function(a, b) {
     if (f.attachment === '0.5mm') flags.push('<span class="case-type badge-asap">0.5mm Attachment</span>');
     if (f.trimLine && f.trimLine !== 'Straight') flags.push('<span class="case-type badge-asap">' + f.trimLine + '</span>');
     if (flags.length) h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">' + flags.join('') + '</div>';
+
+    // FIX 3: Show notes on queue card
+    if (f.notes) h += '<div class="case-notes">📝 ' + f.notes + '</div>';
 
     h += '<div class="case-patient"><strong>' + f.doctor + '</strong> — ' + f.patient + '</div>';
     if (f.clinic) h += '<div class="case-date">' + f.clinic + '</div>';
@@ -452,6 +463,16 @@ function openDetail(idx, editMode) {
   a.textContent = f.asap ? 'YES' : 'No';
   a.className = 'detail-value' + (f.asap ? ' highlight' : '');
 
+  // Show notes in detail screen if present
+  var notesRow = document.getElementById('detNotesRow');
+  var notesEl = document.getElementById('detNotes');
+  if (f.notes) {
+    notesEl.textContent = f.notes;
+    notesRow.style.display = 'flex';
+  } else {
+    notesRow.style.display = 'none';
+  }
+
   document.getElementById('inpModels').value = f.totalModels || '';
   document.getElementById('inpLSheets').value = f.lSheets || '';
   document.getElementById('inpSSheets').value = f.sSheets || '';
@@ -522,7 +543,6 @@ function logCase() {
     rowIndex: f.rowIndex, loggedBy: techName, dateLogged: today
   };
 
-  // Return to queue immediately and show spinner on card
   document.getElementById('detailScreen').style.display = 'none';
   document.getElementById('tabBar').style.display = 'flex';
   document.getElementById('queueScreen').style.display = 'block';
@@ -536,16 +556,14 @@ function logCase() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-    keepalive: true   // ← keeps request alive if Telegram is closed mid-flight
+    keepalive: true
   })
     .then(function(r) {
       if (!r.ok) throw new Error('Server error: ' + r.status);
-      // Parse JSON but don't fail if body is truncated (e.g. connection closed after send)
       return r.json().catch(function() { return { success: true }; });
     })
     .then(function(data) {
       if (data && data.success === false) throw new Error(data.error || 'Workflow error');
-      // Success
       delete cardStates[f.rowIndex];
       f.status = 'Logged';
       f.totalModels = String(payload.totalModels);
@@ -561,18 +579,17 @@ function logCase() {
       switchTab('logged');
     })
     .catch(function(e) {
-      // If the browser aborted the fetch (page closed mid-request), treat as success
       if (e && e.name === 'AbortError') {
         delete cardStates[f.rowIndex];
         f.status = 'Logged';
         renderQueue();
         return;
       }
-      // Real error — show red card
       cardStates[f.rowIndex] = { state: 'error', msg: e.message || 'Failed to log. Tap to retry.' };
       renderQueue();
     });
 }
+
 function saveEdit() {
   var m = document.getElementById('inpModels').value.trim();
   if (!m) { alert('Please enter Total Models'); document.getElementById('inpModels').focus(); return; }
@@ -596,13 +613,13 @@ function saveEdit() {
   };
 
   fetch(EDIT_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data && data.success === false) throw new Error(data.error || 'Failed to save');
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.success === false) throw new Error(data.error || 'Failed to save');
       f.totalModels = String(payload.totalModels);
       f.lSheets = String(payload.totalLSheets);
       f.sSheets = String(payload.totalSSheets);
