@@ -237,7 +237,7 @@ function initApp() {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
       var u = window.Telegram.WebApp.initDataUnsafe.user;
-      if (u && u.username) tgUsername = u.username.toLowerCase();
+      if (u && u.username) tgUsername = u.username.toLowerCase().replace('@', '').trim();
     }
     startApp();
   };
@@ -248,15 +248,24 @@ function initApp() {
 function startApp() { checkAccess(); }
 
 function checkAccess() {
-  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/Technicians!A:B?key=' + API_KEY)
+  fetch('https://sheets.googleapis.com/v4/spreadsheets/' + DASHBOARD_SHEET_ID + '/values/Lab%20Employees!A:C?key=' + API_KEY)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rows = data.values || [];
       var ok = false;
+
       for (var i = 1; i < rows.length; i++) {
-        var tid = (rows[i][1] || '').trim().toLowerCase().replace('@', '');
-        if (tid && tid === tgUsername) { ok = true; techName = (rows[i][0] || '').trim(); break; }
+        var employeeName = (rows[i][0] || '').trim();
+        var telegramId = (rows[i][1] || '').trim().toLowerCase().replace('@', '');
+        // var role = (rows[i][2] || '').trim().toLowerCase(); // use later if needed
+
+        if (telegramId && telegramId === tgUsername) {
+          ok = true;
+          techName = employeeName;
+          break;
+        }
       }
+
       if (ok) {
         document.getElementById('techName').textContent = techName;
         loadResins();
@@ -266,7 +275,9 @@ function checkAccess() {
         document.getElementById('authScreen').style.display = 'block';
       }
     })
-    .catch(function() { document.getElementById('queueLoading').textContent = 'Failed to verify access.'; });
+    .catch(function() {
+      document.getElementById('queueLoading').textContent = 'Failed to verify access.';
+    });
 }
 
 function loadResins() {
